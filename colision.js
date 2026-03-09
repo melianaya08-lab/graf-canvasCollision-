@@ -1,7 +1,6 @@
 const canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
-//Obtiene las dimensiones de la pantalla actual
 const window_height = window.innerHeight;
 const window_width = window.innerWidth;
 
@@ -11,7 +10,7 @@ canvas.style.background = "#ff8";
 
 class Circle {
 
-constructor(x, y, radius, color, text, speed) {
+constructor(x,y,radius,color,text,speed){
 
     this.posX = x;
     this.posY = y;
@@ -24,81 +23,96 @@ constructor(x, y, radius, color, text, speed) {
 
     this.speed = speed;
 
-    this.dx = (Math.random() > 0.5 ? 1 : -1) * this.speed;
-    this.dy = (Math.random() > 0.5 ? 1 : -1) * this.speed;
+    this.dx = (Math.random()>0.5?1:-1)*this.speed;
+    this.dy = (Math.random()>0.5?1:-1)*this.speed;
 
-    this.isColliding = false;
+    this.flash = false;
 }
 
-draw(context) {
+draw(context){
 
     context.beginPath();
 
     context.strokeStyle = this.color;
 
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.font = "20px Arial";
+    context.textAlign="center";
+    context.textBaseline="middle";
+    context.font="20px Arial";
 
-    context.fillText(this.text, this.posX, this.posY);
+    context.fillText(this.text,this.posX,this.posY);
 
-    context.lineWidth = 2;
+    context.lineWidth=2;
 
-    context.arc(this.posX, this.posY, this.radius, 0, Math.PI * 2, false);
+    context.arc(this.posX,this.posY,this.radius,0,Math.PI*2,false);
 
     context.stroke();
 
     context.closePath();
 }
 
-update(context) {
+update(context){
 
     this.draw(context);
 
     this.posX += this.dx;
+    this.posY += this.dy;
 
-    if (this.posX + this.radius > window_width || this.posX - this.radius < 0) {
+    if(this.posX + this.radius > window_width || this.posX - this.radius < 0){
         this.dx = -this.dx;
     }
 
-    this.posY += this.dy;
-
-    if (this.posY + this.radius > window_height || this.posY - this.radius < 0) {
+    if(this.posY + this.radius > window_height || this.posY - this.radius < 0){
         this.dy = -this.dy;
     }
 
+    if(this.flash){
+        this.color = this.originalColor;
+        this.flash = false;
+    }
 }
 
-checkCollision(otherCircle){
+checkCollision(other){
 
-    let dx = this.posX - otherCircle.posX;
-    let dy = this.posY - otherCircle.posY;
+    let dx = other.posX - this.posX;
+    let dy = other.posY - this.posY;
 
     let distance = Math.sqrt(dx*dx + dy*dy);
 
-    if(distance < this.radius + otherCircle.radius){
+    let minDistance = this.radius + other.radius;
 
+    if(distance < minDistance){
+
+        // FLASH AZUL
         this.color = "#0000FF";
-        otherCircle.color = "#0000FF";
+        other.color = "#0000FF";
 
-        this.isColliding = true;
-        otherCircle.isColliding = true;
+        this.flash = true;
+        other.flash = true;
 
+        // EVITAR TRASPASO (separación)
+        let overlap = minDistance - distance;
+
+        let nx = dx / distance;
+        let ny = dy / distance;
+
+        this.posX -= nx * overlap/2;
+        this.posY -= ny * overlap/2;
+
+        other.posX += nx * overlap/2;
+        other.posY += ny * overlap/2;
+
+        // REBOTE
+        this.dx = -this.dx;
+        this.dy = -this.dy;
+
+        other.dx = -other.dx;
+        other.dy = -other.dy;
     }
-}
 
-resetColor(){
-
-    if(!this.isColliding){
-        this.color = this.originalColor;
-    }
-
-    this.isColliding = false;
 }
 
 }
 
-// Crear un array para almacenar círculos
 let circles = [];
 
 function generateCircles(n){
@@ -107,12 +121,12 @@ function generateCircles(n){
 
         let radius = Math.random()*30 + 20;
 
-        let x = Math.random() * (window_width - radius*2) + radius;
-        let y = Math.random() * (window_height - radius*2) + radius;
+        let x = Math.random()*(window_width-radius*2)+radius;
+        let y = Math.random()*(window_height-radius*2)+radius;
 
         let color = `#${Math.floor(Math.random()*16777215).toString(16)}`;
 
-        let speed = Math.random()*4 + 1; // velocidad entre 1 y 5
+        let speed = Math.random()*4 + 1;
 
         let text = `C${i+1}`;
 
@@ -124,8 +138,6 @@ function generateCircles(n){
 function detectCollisions(){
 
     for(let i=0;i<circles.length;i++){
-
-        circles[i].resetColor();
 
         for(let j=i+1;j<circles.length;j++){
 
@@ -149,7 +161,6 @@ function animate(){
     requestAnimationFrame(animate);
 }
 
-// generar 20 círculos
 generateCircles(20);
 
 animate();
