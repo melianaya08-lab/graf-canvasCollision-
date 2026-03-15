@@ -6,161 +6,135 @@ const window_width = window.innerWidth;
 
 canvas.height = window_height;
 canvas.width = window_width;
-canvas.style.background = "#ff8";
+canvas.style.background = "rgb(250, 205, 235)";
 
-class Circle {
+let score = 0;
 
-constructor(x,y,radius,color,text,speed){
+// Imagen
+let img = new Image();
+img.src = "assets/img/gatito.png";
+
+class Object {
+
+constructor(x,y,size,speed){
 
     this.posX = x;
     this.posY = y;
-    this.radius = radius;
-
-    this.color = color;
-    this.originalColor = color;
-
-    this.text = text;
+    this.size = size;
 
     this.speed = speed;
 
-    this.dx = (Math.random()>0.5?1:-1)*this.speed;
-    this.dy = (Math.random()>0.5?1:-1)*this.speed;
-
-    this.flash = false;
+    // REGLAS DE VELOCIDAD
+    if(score > 15){
+        this.dy = this.speed + 4;   // velocidad alta
+    }
+    else if(score > 10){
+        this.dy = this.speed + 2;   // velocidad media
+    }
+    else{
+    this.dy = this.speed;       // velocidad inicial
+    }
 }
 
 draw(context){
 
-    context.beginPath();
-
-    context.strokeStyle = this.color;
-
-    context.textAlign="center";
-    context.textBaseline="middle";
-    context.font="20px Arial";
-
-    context.fillText(this.text,this.posX,this.posY);
-
-    context.lineWidth=2;
-
-    context.arc(this.posX,this.posY,this.radius,0,Math.PI*2,false);
-
-    context.stroke();
-
-    context.closePath();
+    context.drawImage(
+        img,
+        this.posX - this.size/2,
+        this.posY - this.size/2,
+        this.size,
+        this.size
+    );
 }
 
 update(context){
 
     this.draw(context);
 
-    this.posX += this.dx;
     this.posY += this.dy;
 
-    if(this.posX + this.radius > window_width || this.posX - this.radius < 0){
-        this.dx = -this.dx;
+    // reaparece arriba
+    if(this.posY > window_height + this.size){
+
+        this.posY = -this.size;
+        this.posX = Math.random() * window_width;
+
     }
-
-    if(this.posY + this.radius > window_height || this.posY - this.radius < 0){
-        this.dy = -this.dy;
-    }
-
-    if(this.flash){
-        this.color = this.originalColor;
-        this.flash = false;
-    }
-}
-
-checkCollision(other){
-
-    let dx = other.posX - this.posX;
-    let dy = other.posY - this.posY;
-
-    let distance = Math.sqrt(dx*dx + dy*dy);
-
-    let minDistance = this.radius + other.radius;
-
-    if(distance < minDistance){
-
-        // FLASH AZUL
-        this.color = "#0000FF";
-        other.color = "#0000FF";
-
-        this.flash = true;
-        other.flash = true;
-
-        // EVITAR TRASPASO (separación)
-        let overlap = minDistance - distance;
-
-        let nx = dx / distance;
-        let ny = dy / distance;
-
-        this.posX -= nx * overlap/2;
-        this.posY -= ny * overlap/2;
-
-        other.posX += nx * overlap/2;
-        other.posY += ny * overlap/2;
-
-        // REBOTE
-        this.dx = -this.dx;
-        this.dy = -this.dy;
-
-        other.dx = -other.dx;
-        other.dy = -other.dy;
-    }
-
 }
 
 }
 
-let circles = [];
+let objects = [];
 
-function generateCircles(n){
+function generateObjects(n){
 
     for(let i=0;i<n;i++){
 
-        let radius = Math.random()*30 + 20;
+        let size = 60;
 
-        let x = Math.random()*(window_width-radius*2)+radius;
-        let y = Math.random()*(window_height-radius*2)+radius;
+        let x = Math.random() * window_width;
 
-        let color = `#${Math.floor(Math.random()*16777215).toString(16)}`;
+        let y = -size;
 
-        let speed = Math.random()*4 + 1;
+        let speed = Math.random()*3 + 2;
 
-        let text = `C${i+1}`;
-
-        circles.push(new Circle(x,y,radius,color,text,speed));
+        objects.push(new Object(x,y,size,speed));
     }
 
 }
 
-function detectCollisions(){
+function drawScore(){
 
-    for(let i=0;i<circles.length;i++){
+    ctx.font = "25px Arial";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "right";
 
-        for(let j=i+1;j<circles.length;j++){
+    ctx.fillText("Eliminados: " + score, window_width - 20, 40);
 
-            circles[i].checkCollision(circles[j]);
+}
+
+// click para eliminar
+canvas.addEventListener("click", function(event){
+
+    const rect = canvas.getBoundingClientRect();
+
+    let mouseX = event.clientX - rect.left;
+    let mouseY = event.clientY - rect.top;
+
+    objects.forEach((obj,index)=>{
+
+        let dx = mouseX - obj.posX;
+        let dy = mouseY - obj.posY;
+
+        let distance = Math.sqrt(dx*dx + dy*dy);
+
+        if(distance < obj.size/2){
+
+            objects.splice(index,1);
+
+            score++;
+
+            generateObjects(1);
 
         }
-    }
 
-}
+    });
+
+});
 
 function animate(){
 
     ctx.clearRect(0,0,window_width,window_height);
 
-    detectCollisions();
-
-    circles.forEach(circle=>{
-        circle.update(ctx);
+    objects.forEach(obj=>{
+        obj.update(ctx);
     });
+
+    drawScore();
 
     requestAnimationFrame(animate);
 }
 
-generateCircles(20);
+generateObjects(20);
 
 animate();
